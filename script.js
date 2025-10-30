@@ -634,8 +634,42 @@ document.addEventListener("DOMContentLoaded", () => {
       userData: state.userData,
     };
 
+    // Persist results
     saveData(resultData);
-    setState({ results: resultData, step: "results" });
+
+    // Show rewarded interstitial ad before displaying final results.
+    // If `show_10118392` is provided by your ad SDK, it should return a Promise
+    // that resolves when the ad/watch is complete. Place the user's reward
+    // logic inside the `.then()` (the SDK example you shared shows an alert).
+    // If the function is not available or it rejects, we fallback to showing
+    // the results immediately so the UX is not blocked.
+    const showAdAndThen = () => {
+      setState({ results: resultData, step: "results" });
+    };
+
+    if (typeof show_10118392 === "function") {
+      try {
+        // Call the ad and wait for it to finish before showing results
+        show_10118392()
+          .then(() => {
+            // Optional: here you can execute the reward callback the SDK expects
+            // e.g. grant in-app currency, show a confirmation, etc.
+            alert("You have seen an ad!");
+            showAdAndThen();
+          })
+          .catch((err) => {
+            console.error("Ad failed or was closed before completion:", err);
+            // Fallback: show results anyway
+            showAdAndThen();
+          });
+      } catch (err) {
+        console.error("Error while trying to show ad:", err);
+        showAdAndThen();
+      }
+    } else {
+      // No ad function available — just show results
+      showAdAndThen();
+    }
   };
 
   const saveData = (data) => {
